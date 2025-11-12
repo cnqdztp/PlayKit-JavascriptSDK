@@ -11,16 +11,17 @@ import { ImageProvider } from '../providers/ImageProvider';
 import { ChatClient } from './ChatClient';
 import { ImageClient } from './ImageClient';
 import { NPCClient, NPCConfig } from './NPCClient';
+import { RechargeConfig } from '../types/recharge';
 
 export class PlayKitSDK extends EventEmitter {
-  private config: SDKConfig;
+  private config: SDKConfig & { recharge?: RechargeConfig };
   private authManager: AuthManager;
   private playerClient: PlayerClient;
   private chatProvider: ChatProvider;
   private imageProvider: ImageProvider;
   private initialized: boolean = false;
 
-  constructor(config: SDKConfig) {
+  constructor(config: SDKConfig & { recharge?: RechargeConfig }) {
     super();
     this.config = {
       defaultChatModel: 'gpt-4o-mini',
@@ -31,9 +32,13 @@ export class PlayKitSDK extends EventEmitter {
 
     // Initialize managers and providers
     this.authManager = new AuthManager(this.config);
-    this.playerClient = new PlayerClient(this.authManager, this.config);
+    this.playerClient = new PlayerClient(this.authManager, this.config, this.config.recharge);
     this.chatProvider = new ChatProvider(this.authManager, this.config);
     this.imageProvider = new ImageProvider(this.authManager, this.config);
+
+    // Connect providers to player client for balance checking
+    this.chatProvider.setPlayerClient(this.playerClient);
+    this.imageProvider.setPlayerClient(this.playerClient);
 
     // Forward authentication events
     this.authManager.on('authenticated', (authState) => {
@@ -56,6 +61,15 @@ export class PlayKitSDK extends EventEmitter {
         console.error('[PlayKitSDK] Auth error', error);
       }
     });
+
+    // Forward recharge events
+    this.playerClient.on('recharge_opened', () => this.emit('recharge_opened'));
+    this.playerClient.on('recharge_modal_shown', () => this.emit('recharge_modal_shown'));
+    this.playerClient.on('recharge_modal_dismissed', () => this.emit('recharge_modal_dismissed'));
+    this.playerClient.on('insufficient_credits', (error) => this.emit('insufficient_credits', error));
+    this.playerClient.on('balance_low', (credits) => this.emit('balance_low', credits));
+    this.playerClient.on('balance_updated', (credits) => this.emit('balance_updated', credits));
+    this.playerClient.on('player_info_updated', (info) => this.emit('player_info_updated', info));
   }
 
   /**
@@ -160,5 +174,50 @@ export class PlayKitSDK extends EventEmitter {
    */
   setDebug(enabled: boolean): void {
     this.config.debug = enabled;
+  }
+
+  /**
+   * Show insufficient balance modal
+   */
+  async showInsufficientBalanceModal(customMessage?: string): Promise<void> {
+    return await this.playerClient.showInsufficientBalanceModal(customMessage);
+  }
+
+  /**
+   * Open recharge window in new tab
+   */
+  openRechargeWindow(): void {
+    this.playerClient.openRechargeWindow();
+  }
+
+  /**
+   * Enable automatic periodic balance checking
+   * @param intervalMs - Check interval in milliseconds (default: 30000)
+   */
+  enableAutoBalanceCheck(intervalMs?: number): void {
+    this.playerClient.enableAutoBalanceCheck(intervalMs);
+  }
+
+  /**
+   * Disable automatic balance checking
+   */
+  disableAutoBalanceCheck(): void {
+    this.playerClient.disableAutoBalanceCheck();
+  }
+
+  /**
+   * Get player's current cached balance
+   */
+  getCachedBalance(): number | null {
+    const playerInfo = this.playerClient.getCachedPlayerInfo();
+    return playerInfo?.credits ?? null;
+  }
+
+  /**
+   * Refresh and get player's current balance
+   */
+  async refreshBalance(): Promise<number> {
+    const playerInfo = await this.playerClient.refreshPlayerInfo();
+    return playerInfo.credits;
   }
 }

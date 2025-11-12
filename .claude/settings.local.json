@@ -3,7 +3,9 @@
     "allow": [
       "Bash(find:*)",
       "Bash(npm install:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "WebSearch",
+      "WebFetch(domain:baseweb.design)"
     ],
     "additionalDirectories": [
       "D:\\Project\\DeveloperWorks-UnitySDK"

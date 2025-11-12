@@ -17,6 +17,9 @@ export { PlayerClient } from './core/PlayerClient';
 export { AuthManager } from './auth/AuthManager';
 export { TokenStorage } from './auth/TokenStorage';
 
+// Recharge
+export { RechargeManager } from './recharge/RechargeManager';
+
 // Types
 export type {
   // Common types
@@ -40,6 +43,13 @@ export type {
   GeneratedImage,
   ImageGenerationResponse,
 } from './types';
+
+// Recharge types
+export type {
+  RechargeConfig,
+  RechargeModalOptions,
+  RechargeEvents,
+} from './types/recharge';
 
 // Utilities
 export { StreamParser } from './utils/StreamParser';

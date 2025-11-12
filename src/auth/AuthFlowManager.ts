@@ -33,11 +33,127 @@ interface Reachability {
   city: string;
 }
 
+interface I18nTranslations {
+  signIn: string;
+  signInSubtitle: string;
+  email: string;
+  phone: string;
+  emailPlaceholder: string;
+  phonePlaceholder: string;
+  sendCode: string;
+  enterCode: string;
+  enterCodeSubtitle: string;
+  verify: string;
+  pleaseEnterEmail: string;
+  pleaseEnterPhone: string;
+  enterAllDigits: string;
+  verificationFailed: string;
+  failedToSendCode: string;
+  invalidCode: string;
+}
+
+type SupportedLanguage = 'en' | 'zh' | 'zh-TW' | 'ja' | 'ko';
+
+// i18n translations
+const translations: Record<SupportedLanguage, I18nTranslations> = {
+  en: {
+    signIn: 'Sign In / Register',
+    signInSubtitle: 'If you don\'t have an account, we\'ll create one for you. Sign up and get free credits!',
+    email: 'Email',
+    phone: 'Phone',
+    emailPlaceholder: 'Enter your email address',
+    phonePlaceholder: 'Enter your phone number (+86 Only)',
+    sendCode: 'Send Code',
+    enterCode: 'Enter Code',
+    enterCodeSubtitle: "We've sent a 6-digit code to your",
+    verify: 'Verify',
+    pleaseEnterEmail: 'Please enter your email address',
+    pleaseEnterPhone: 'Please enter your phone number',
+    enterAllDigits: 'Please enter all 6 digits',
+    verificationFailed: 'Verification failed',
+    failedToSendCode: 'Failed to send code',
+    invalidCode: 'Invalid verification code',
+  },
+  zh: {
+    signIn: '登录/注册',
+    signInSubtitle: '如果您没有帐户，我们会为您自动注册。注册即送积分！',
+    email: '邮箱',
+    phone: '手机',
+    emailPlaceholder: '请输入邮箱地址',
+    phonePlaceholder: '请输入手机号（仅限 +86）',
+    sendCode: '发送验证码',
+    enterCode: '输入验证码',
+    enterCodeSubtitle: '我们已向您发送了 6 位验证码：',
+    verify: '验证',
+    pleaseEnterEmail: '请输入邮箱地址',
+    pleaseEnterPhone: '请输入手机号',
+    enterAllDigits: '请输入完整的 6 位验证码',
+    verificationFailed: '验证失败',
+    failedToSendCode: '发送验证码失败',
+    invalidCode: '验证码无效',
+  },
+  'zh-TW': {
+    signIn: '登入/註冊',
+    signInSubtitle: '如果您沒有帳戶，我們會為您自動註冊。註冊即送積分！',
+    email: '電子郵件',
+    phone: '手機',
+    emailPlaceholder: '請輸入電子郵件地址',
+    phonePlaceholder: '請輸入手機號碼（僅限 +86）',
+    sendCode: '發送驗證碼',
+    enterCode: '輸入驗證碼',
+    enterCodeSubtitle: '我們已向您發送了 6 位驗證碼：',
+    verify: '驗證',
+    pleaseEnterEmail: '請輸入電子郵件地址',
+    pleaseEnterPhone: '請輸入手機號碼',
+    enterAllDigits: '請輸入完整的 6 位驗證碼',
+    verificationFailed: '驗證失敗',
+    failedToSendCode: '發送驗證碼失敗',
+    invalidCode: '驗證碼無效',
+  },
+  ja: {
+    signIn: 'サインイン/登録',
+    signInSubtitle: 'アカウントをお持ちでない場合は、自動的に作成します。登録すると無料クレジットがもらえます！',
+    email: 'メール',
+    phone: '電話',
+    emailPlaceholder: 'メールアドレスを入力してください',
+    phonePlaceholder: '電話番号を入力してください（+86のみ）',
+    sendCode: '認証コードを送信',
+    enterCode: '認証コードを入力',
+    enterCodeSubtitle: '6桁の認証コードを送信しました：',
+    verify: '検証',
+    pleaseEnterEmail: 'メールアドレスを入力してください',
+    pleaseEnterPhone: '電話番号を入力してください',
+    enterAllDigits: '6桁すべて入力してください',
+    verificationFailed: '検証に失敗しました',
+    failedToSendCode: '認証コードの送信に失敗しました',
+    invalidCode: '認証コードが無効です',
+  },
+  ko: {
+    signIn: '로그인/가입',
+    signInSubtitle: '계정이 없으시면 자동으로 생성해 드립니다. 가입하면 무료 크레딧을 받으세요！',
+    email: '이메일',
+    phone: '전화',
+    emailPlaceholder: '이메일 주소를 입력하세요',
+    phonePlaceholder: '전화번호를 입력하세요（+86만 지원）',
+    sendCode: '인증 코드 전송',
+    enterCode: '인증 코드 입력',
+    enterCodeSubtitle: '6자리 인증 코드를 보냈습니다：',
+    verify: '확인',
+    pleaseEnterEmail: '이메일 주소를 입력하세요',
+    pleaseEnterPhone: '전화번호를 입력하세요',
+    enterAllDigits: '6자리를 모두 입력하세요',
+    verificationFailed: '인증 실패',
+    failedToSendCode: '인증 코드 전송 실패',
+    invalidCode: '인증 코드가 잘못되었습니다',
+  },
+};
+
 export class AuthFlowManager extends EventEmitter {
   private baseURL: string;
   private currentSessionId: string | null = null;
   private uiContainer: HTMLElement | null = null;
   private isSuccess: boolean = false;
+  private currentLanguage: SupportedLanguage = 'en';
 
   // UI Elements
   private modal: HTMLElement | null = null;
@@ -48,6 +164,44 @@ export class AuthFlowManager extends EventEmitter {
   constructor(baseURL: string = 'https://playkit.agentlandlab.com') {
     super();
     this.baseURL = baseURL;
+    this.currentLanguage = this.detectLanguage();
+  }
+
+  /**
+   * Detect browser language (safe for Node.js environment)
+   */
+  private detectLanguage(): SupportedLanguage {
+    // Check if running in browser environment
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+      return 'en'; // Default to English in Node.js environment
+    }
+
+    try {
+      const browserLang = navigator.language.toLowerCase();
+
+      // Match language codes
+      if (browserLang.startsWith('zh-tw') || browserLang.startsWith('zh-hk')) {
+        return 'zh-TW'; // Traditional Chinese
+      } else if (browserLang.startsWith('zh')) {
+        return 'zh'; // Simplified Chinese
+      } else if (browserLang.startsWith('ja')) {
+        return 'ja'; // Japanese
+      } else if (browserLang.startsWith('ko')) {
+        return 'ko'; // Korean
+      } else {
+        return 'en'; // Default to English
+      }
+    } catch (error) {
+      // Fallback to English if detection fails
+      return 'en';
+    }
+  }
+
+  /**
+   * Get translated text
+   */
+  private t(key: keyof I18nTranslations): string {
+    return translations[this.currentLanguage][key];
   }
 
   /**
@@ -91,18 +245,18 @@ export class AuthFlowManager extends EventEmitter {
         <!-- Identifier Panel -->
         <div class="playkit-auth-panel" id="playkit-identifier-panel">
           <div class="playkit-auth-header">
-            <h2>Sign In</h2>
-            <p>Continue to use AI features</p>
+            <h2>${this.t('signIn')}</h2>
+            <p>${this.t('signInSubtitle')}</p>
           </div>
 
           <div class="playkit-auth-toggle">
             <label class="playkit-toggle-option">
               <input type="radio" name="auth-type" value="email" checked>
-              <span>Email</span>
+              <span>${this.t('email')}</span>
             </label>
             <label class="playkit-toggle-option">
               <input type="radio" name="auth-type" value="phone">
-              <span>Phone</span>
+              <span>${this.t('phone')}</span>
             </label>
           </div>
 
@@ -115,14 +269,14 @@ export class AuthFlowManager extends EventEmitter {
               <input
                 type="text"
                 id="playkit-identifier-input"
-                placeholder="Enter your email address"
+                placeholder="${this.t('emailPlaceholder')}"
                 autocomplete="off"
               >
             </div>
           </div>
 
           <button class="playkit-auth-button" id="playkit-send-code-btn">
-            Send Code
+            ${this.t('sendCode')}
           </button>
 
           <div class="playkit-auth-error" id="playkit-error-text"></div>
@@ -136,8 +290,8 @@ export class AuthFlowManager extends EventEmitter {
                 <path d="M19 12H5M12 19l-7-7 7-7"/>
               </svg>
             </button>
-            <h2>Enter Code</h2>
-            <p>We've sent a 6-digit code to your <span id="playkit-identifier-display"></span></p>
+            <h2>${this.t('enterCode')}</h2>
+            <p>${this.t('enterCodeSubtitle')} <span id="playkit-identifier-display"></span></p>
           </div>
 
           <div class="playkit-auth-input-group">
@@ -152,7 +306,7 @@ export class AuthFlowManager extends EventEmitter {
           </div>
 
           <button class="playkit-auth-button" id="playkit-verify-btn">
-            Verify
+            ${this.t('verify')}
           </button>
 
           <div class="playkit-auth-error" id="playkit-verify-error-text"></div>
@@ -200,7 +354,7 @@ export class AuthFlowManager extends EventEmitter {
         display: flex;
         justify-content: center;
         align-items: center;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       }
 
       .playkit-auth-overlay {
@@ -209,22 +363,22 @@ export class AuthFlowManager extends EventEmitter {
         left: 0;
         right: 0;
         bottom: 0;
-        background: rgba(0, 0, 0, 0.6);
-        backdrop-filter: blur(4px);
+        background: rgba(0, 0, 0, 0.48);
+        backdrop-filter: blur(8px);
       }
 
       .playkit-auth-container {
         position: relative;
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        background: #FFFFFF;
+        border-radius: 4px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
         width: 90%;
         max-width: 420px;
         overflow: hidden;
       }
 
       .playkit-auth-panel {
-        padding: 32px;
+        padding: 40px 32px;
       }
 
       .playkit-auth-header {
@@ -235,41 +389,43 @@ export class AuthFlowManager extends EventEmitter {
 
       .playkit-auth-header h2 {
         margin: 0 0 8px 0;
-        font-size: 24px;
+        font-size: 28px;
         font-weight: 600;
-        color: #1a1a1a;
+        color: #000000;
       }
 
       .playkit-auth-header p {
         margin: 0;
         font-size: 14px;
-        color: #666;
+        color: #666666;
+        line-height: 1.5;
       }
 
       .playkit-back-button {
         position: absolute;
         left: 0;
         top: 0;
-        background: none;
+        background: transparent;
         border: none;
         cursor: pointer;
-        padding: 8px;
-        border-radius: 8px;
-        color: #666;
-        transition: all 0.2s;
+        padding: 4px;
+        border-radius: 2px;
+        color: #666666;
+        transition: background-color 0.15s ease, color 0.15s ease;
       }
 
       .playkit-back-button:hover {
-        background: #f0f0f0;
-        color: #333;
+        background: #F6F6F6;
+        color: #000000;
       }
 
       .playkit-auth-toggle {
         display: flex;
-        background: #f5f5f5;
-        border-radius: 12px;
-        padding: 4px;
+        background: #F6F6F6;
+        border-radius: 2px;
+        padding: 2px;
         margin-bottom: 24px;
+        gap: 2px;
       }
 
       .playkit-toggle-option {
@@ -277,10 +433,10 @@ export class AuthFlowManager extends EventEmitter {
         display: flex;
         justify-content: center;
         align-items: center;
-        padding: 10px;
-        border-radius: 8px;
+        padding: 10px 16px;
+        border-radius: 2px;
         cursor: pointer;
-        transition: all 0.2s;
+        transition: background-color 0.15s ease;
       }
 
       .playkit-toggle-option input {
@@ -290,16 +446,16 @@ export class AuthFlowManager extends EventEmitter {
       .playkit-toggle-option span {
         font-size: 14px;
         font-weight: 500;
-        color: #666;
+        color: #666666;
+        transition: color 0.15s ease;
       }
 
       .playkit-toggle-option input:checked + span {
-        color: #667eea;
+        color: #FFFFFF;
       }
 
       .playkit-toggle-option:has(input:checked) {
-        background: white;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        background: #276EF1;
       }
 
       .playkit-auth-input-group {
@@ -314,29 +470,35 @@ export class AuthFlowManager extends EventEmitter {
 
       .playkit-input-icon {
         position: absolute;
-        left: 16px;
-        color: #999;
+        left: 12px;
+        color: #999999;
         pointer-events: none;
       }
 
       .playkit-input-wrapper input {
         width: 100%;
-        padding: 14px 16px 14px 48px;
-        border: 2px solid #e0e0e0;
-        border-radius: 12px;
-        font-size: 16px;
-        transition: border-color 0.2s;
+        padding: 12px 12px 12px 44px;
+        border: 1px solid #CCCCCC;
+        border-radius: 2px;
+        font-size: 14px;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
         box-sizing: border-box;
+        background: #FFFFFF;
+      }
+
+      .playkit-input-wrapper input:hover {
+        border-color: #999999;
       }
 
       .playkit-input-wrapper input:focus {
         outline: none;
-        border-color: #667eea;
+        border-color: #276EF1;
+        box-shadow: 0 0 0 3px rgba(39, 110, 241, 0.1);
       }
 
       .playkit-code-inputs {
         display: flex;
-        gap: 12px;
+        gap: 8px;
         justify-content: center;
       }
 
@@ -346,50 +508,58 @@ export class AuthFlowManager extends EventEmitter {
         text-align: center;
         font-size: 24px;
         font-weight: 600;
-        border: 2px solid #e0e0e0 !important;
-        border-radius: 12px;
+        border: 1px solid #CCCCCC !important;
+        border-radius: 2px;
         padding: 0 !important;
-        transition: all 0.2s;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        background: #FFFFFF;
+      }
+
+      .playkit-code-input:hover {
+        border-color: #999999 !important;
       }
 
       .playkit-code-input:focus {
-        border-color: #667eea !important;
-        transform: scale(1.05);
+        outline: none;
+        border-color: #276EF1 !important;
+        box-shadow: 0 0 0 3px rgba(39, 110, 241, 0.1);
       }
 
       .playkit-auth-button {
         width: 100%;
-        padding: 14px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+        padding: 12px 16px;
+        background: #276EF1;
+        color: #FFFFFF;
         border: none;
-        border-radius: 12px;
-        font-size: 16px;
-        font-weight: 600;
+        border-radius: 2px;
+        font-size: 14px;
+        font-weight: 500;
         cursor: pointer;
-        transition: all 0.2s;
+        transition: background-color 0.15s ease;
       }
 
       .playkit-auth-button:hover:not(:disabled) {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        background: #174EB6;
+      }
+
+      .playkit-auth-button:active:not(:disabled) {
+        background: #0F3A8A;
       }
 
       .playkit-auth-button:disabled {
-        background: #ccc;
+        background: #CCCCCC;
         cursor: not-allowed;
-        transform: none;
       }
 
       .playkit-auth-error {
         margin-top: 16px;
-        padding: 12px;
-        background: #fee;
-        border: 1px solid #fcc;
-        border-radius: 8px;
-        color: #c33;
-        font-size: 14px;
-        text-align: center;
+        padding: 12px 16px;
+        background: #FEF0F0;
+        border: 1px solid #FDD;
+        border-radius: 2px;
+        color: #CC3333;
+        font-size: 13px;
+        text-align: left;
         display: none;
       }
 
@@ -403,20 +573,20 @@ export class AuthFlowManager extends EventEmitter {
         left: 0;
         right: 0;
         bottom: 0;
-        background: rgba(255, 255, 255, 0.95);
+        background: rgba(255, 255, 255, 0.96);
         display: flex;
         justify-content: center;
         align-items: center;
-        border-radius: 16px;
+        border-radius: 4px;
       }
 
       .playkit-spinner {
-        width: 48px;
-        height: 48px;
-        border: 4px solid #f0f0f0;
-        border-top: 4px solid #667eea;
+        width: 40px;
+        height: 40px;
+        border: 3px solid #F0F0F0;
+        border-top: 3px solid #276EF1;
         border-radius: 50%;
-        animation: playkit-spin 1s linear infinite;
+        animation: playkit-spin 0.8s linear infinite;
       }
 
       @keyframes playkit-spin {
@@ -428,10 +598,11 @@ export class AuthFlowManager extends EventEmitter {
         .playkit-auth-container {
           width: 95%;
           max-width: none;
+          border-radius: 2px;
         }
 
         .playkit-auth-panel {
-          padding: 24px;
+          padding: 32px 24px;
         }
 
         .playkit-code-input {
@@ -441,7 +612,7 @@ export class AuthFlowManager extends EventEmitter {
         }
 
         .playkit-code-inputs {
-          gap: 8px;
+          gap: 6px;
         }
       }
     `;
@@ -462,8 +633,8 @@ export class AuthFlowManager extends EventEmitter {
     const updateIcon = () => {
       const isEmail = emailRadio?.checked;
       identifierInput.placeholder = isEmail
-        ? 'Enter your email address'
-        : 'Enter your phone number (+86 Only)';
+        ? this.t('emailPlaceholder')
+        : this.t('phonePlaceholder');
 
       // Update icon
       if (isEmail) {
@@ -555,7 +726,7 @@ export class AuthFlowManager extends EventEmitter {
     const type = emailRadio.checked ? 'email' : 'phone';
 
     if (!identifier) {
-      this.showError('Please enter your ' + (type === 'email' ? 'email address' : 'phone number'));
+      this.showError(type === 'email' ? this.t('pleaseEnterEmail') : this.t('pleaseEnterPhone'));
       return;
     }
 
@@ -578,7 +749,7 @@ export class AuthFlowManager extends EventEmitter {
         this.showVerificationPanel();
       }
     } catch (error) {
-      this.showError(error instanceof Error ? error.message : 'Failed to send code');
+      this.showError(error instanceof Error ? error.message : this.t('failedToSendCode'));
     } finally {
       this.hideLoading();
       sendCodeBtn.disabled = false;
@@ -595,7 +766,7 @@ export class AuthFlowManager extends EventEmitter {
     const code = Array.from(codeInputs).map((input) => input.value).join('');
 
     if (code.length !== 6) {
-      this.showError('Please enter all 6 digits', 'verify');
+      this.showError(this.t('enterAllDigits'), 'verify');
       return;
     }
 
@@ -606,7 +777,7 @@ export class AuthFlowManager extends EventEmitter {
       this.emit('success', globalToken);
     } catch (error) {
       this.showError(
-        error instanceof Error ? error.message : 'Verification failed',
+        error instanceof Error ? error.message : this.t('verificationFailed'),
         'verify'
       );
       this.hideLoading();
@@ -624,13 +795,13 @@ export class AuthFlowManager extends EventEmitter {
     });
 
     if (!response.ok) {
-      throw new PlayKitError('Failed to send verification code', 'SEND_CODE_ERROR', response.status);
+      throw new PlayKitError(this.t('failedToSendCode'), 'SEND_CODE_ERROR', response.status);
     }
 
     const data: SendCodeResponse = await response.json();
 
     if (!data.success || !data.sessionId) {
-      throw new PlayKitError('Invalid response from server', 'INVALID_RESPONSE');
+      throw new PlayKitError(this.t('failedToSendCode'), 'INVALID_RESPONSE');
     }
 
     this.currentSessionId = data.sessionId;
@@ -655,13 +826,13 @@ export class AuthFlowManager extends EventEmitter {
     });
 
     if (!response.ok) {
-      throw new PlayKitError('Invalid verification code', 'INVALID_CODE', response.status);
+      throw new PlayKitError(this.t('invalidCode'), 'INVALID_CODE', response.status);
     }
 
     const data: VerifyCodeResponse = await response.json();
 
     if (!data.success || !data.globalToken) {
-      throw new PlayKitError('Verification failed', 'VERIFICATION_FAILED');
+      throw new PlayKitError(this.t('verificationFailed'), 'VERIFICATION_FAILED');
     }
 
     return data.globalToken;

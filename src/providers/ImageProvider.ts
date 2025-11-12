@@ -9,6 +9,7 @@ import {
   SDKConfig,
 } from '../types';
 import { AuthManager } from '../auth/AuthManager';
+import { PlayerClient } from '../core/PlayerClient';
 
 const DEFAULT_BASE_URL = 'https://playkit.agentlandlab.com';
 
@@ -16,11 +17,19 @@ export class ImageProvider {
   private authManager: AuthManager;
   private config: SDKConfig;
   private baseURL: string;
+  private playerClient?: PlayerClient;
 
   constructor(authManager: AuthManager, config: SDKConfig) {
     this.authManager = authManager;
     this.config = config;
     this.baseURL = config.baseURL || DEFAULT_BASE_URL;
+  }
+
+  /**
+   * Set player client for balance checking
+   */
+  setPlayerClient(playerClient: PlayerClient): void {
+    this.playerClient = playerClient;
   }
 
   /**
@@ -35,16 +44,21 @@ export class ImageProvider {
     const model = imageConfig.model || this.config.defaultImageModel || 'dall-e-3';
     const endpoint = `/ai/${this.config.gameId}/v1/image`;
 
-    const requestBody = {
+    const requestBody: any = {
       model,
       prompt: imageConfig.prompt,
       n: imageConfig.n || 1,
       size: imageConfig.size || '1024x1024',
       seed: imageConfig.seed || null,
-      quality: imageConfig.quality || 'standard',
-      style: imageConfig.style || 'vivid',
-      response_format: 'b64_json', // Always request base64
     };
+
+    // Add optional quality and style if provided (for DALL-E models)
+    if (imageConfig.quality) {
+      requestBody.quality = imageConfig.quality;
+    }
+    if (imageConfig.style) {
+      requestBody.style = imageConfig.style;
+    }
 
     try {
       const response = await fetch(`${this.baseURL}${endpoint}`, {
@@ -58,14 +72,32 @@ export class ImageProvider {
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({ message: 'Image generation failed' }));
-        throw new PlayKitError(
+        const playKitError = new PlayKitError(
           error.message || 'Image generation failed',
           error.code,
           response.status
         );
+
+        // Check for insufficient credits error
+        if (error.code === 'INSUFFICIENT_CREDITS' || response.status === 402) {
+          if (this.playerClient) {
+            await this.playerClient.handleInsufficientCredits(playKitError);
+          }
+        }
+
+        throw playKitError;
       }
 
-      return await response.json();
+      const result = await response.json();
+
+      // Check balance after successful API call
+      if (this.playerClient) {
+        this.playerClient.checkBalanceAfterApiCall().catch(() => {
+          // Silently fail
+        });
+      }
+
+      return result;
     } catch (error) {
       if (error instanceof PlayKitError) {
         throw error;

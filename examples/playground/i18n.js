@@ -27,6 +27,7 @@ const translations = {
     reinitButton: 'Re-initialize',
     logoutButton: 'Logout',
     debugMode: 'Enable Debug Mode',
+    rechargeButton: 'Recharge Now',
 
     // Tabs
     tabTextGen: 'Text Generation',
@@ -41,6 +42,7 @@ const translations = {
     messagesPlaceholder: 'Messages will appear here...',
     inputPlaceholder: 'Type your message...',
     sendButton: 'Send',
+    clearHistory: 'Clear History',
 
     // Image Generation Tab
     imageGenTitle: 'Image Generation',
@@ -99,6 +101,8 @@ const translations = {
     startConversation: 'Start talking to {name}...',
     historyResetMsg: 'History reset. Start a new conversation with {name}...',
     historyLoadedMsg: 'History loaded. Continue the conversation...',
+    confirmClearChat: 'Are you sure you want to clear all chat messages?',
+    chatHistoryCleared: 'Chat history cleared',
 
     // Errors
     error: 'Error',
@@ -132,6 +136,7 @@ const translations = {
     reinitButton: '重新初始化',
     logoutButton: '退出登录',
     debugMode: '启用调试模式',
+    rechargeButton: '立即充值',
 
     // Tabs
     tabTextGen: '文本生成',
@@ -146,6 +151,7 @@ const translations = {
     messagesPlaceholder: '消息将在这里显示...',
     inputPlaceholder: '输入你的消息...',
     sendButton: '发送',
+    clearHistory: '清除历史',
 
     // Image Generation Tab
     imageGenTitle: '图像生成',
@@ -204,6 +210,8 @@ const translations = {
     startConversation: '开始与 {name} 对话...',
     historyResetMsg: '历史已重置。与 {name} 开始新对话...',
     historyLoadedMsg: '历史已加载。继续对话...',
+    confirmClearChat: '确定要清除所有聊天消息吗？',
+    chatHistoryCleared: '聊天历史已清除',
 
     // Errors
     error: '错误',
@@ -267,17 +275,21 @@ class I18n {
       const key = element.getAttribute('data-i18n');
       const translated = this.t(key);
 
-      if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
-        if (element.getAttribute('placeholder') !== null) {
-          element.placeholder = translated;
-        } else {
-          element.value = translated;
-        }
-      } else if (element.tagName === 'OPTION') {
+      if (element.tagName === 'OPTION') {
+        element.textContent = translated;
+      } else if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+        // Don't update value or placeholder for inputs
         element.textContent = translated;
       } else {
         element.textContent = translated;
       }
+    });
+
+    // Update placeholders separately
+    document.querySelectorAll('[data-i18n-placeholder]').forEach((element) => {
+      const key = element.getAttribute('data-i18n-placeholder');
+      const translated = this.t(key);
+      element.placeholder = translated;
     });
 
     // Update language selector

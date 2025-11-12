@@ -38,12 +38,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/developerworks/playkit-sdk-js"
+    "url": "https://github.com/cnqdztp/DeveloperWorks-JavascriptSDK"
   },
   "bugs": {
-    "url": "https://github.com/developerworks/playkit-sdk-js/issues"
+    "url": "https://github.com/cnqdztp/DeveloperWorks-JavascriptSDK/issues"
   },
-  "homepage": "https://github.com/developerworks/playkit-sdk-js#readme",
+  "homepage": "https://github.com/cnqdztp/DeveloperWorks-JavascriptSDK#readme",
   "dependencies": {
     "eventemitter3": "^5.0.1"
   },

@@ -12,7 +12,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
 
   <!-- PlayKit SDK -->
-  <script src="../../dist/index.umd.js"></script>
+  <script src="../../dist/index.umd.js?v=11"></script>
 
   <style>
     body {
@@ -65,14 +65,15 @@
       <!-- Sidebar - Configuration -->
       <aside class="lg:col-span-1">
         <div class="bg-white rounded-lg shadow p-6 sticky top-6">
-          <h2 class="text-lg font-semibold text-gray-900 mb-4">Configuration</h2>
+          <h2 class="text-lg font-semibold text-gray-900 mb-4" data-i18n="configuration">Configuration</h2>
 
           <!-- Game ID -->
           <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Game ID</label>
+            <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="gameId">Game ID</label>
             <input
               type="text"
               id="game-id-input"
+              data-i18n-placeholder="gameIdPlaceholder"
               placeholder="your-game-id"
               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
             >
@@ -80,19 +81,45 @@
 
           <!-- Auth Method -->
           <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Authentication</label>
+            <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="authentication">Authentication</label>
             <select id="auth-method" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-              <option value="auto">Auto Login (Player)</option>
-              <option value="token">Developer Token</option>
+              <option value="auto" data-i18n="authAuto">Auto Login (Player)</option>
+              <option value="token" data-i18n="authToken" selected>Developer Token</option>
             </select>
           </div>
 
+          <!-- Player Credit Display -->
+          <div id="credit-display" class="mb-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-md" style="display: none;">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span class="text-sm font-medium text-gray-700">Player Credit</span>
+              </div>
+              <div class="flex items-baseline gap-1">
+                <span class="text-2xl font-bold text-blue-600" id="credit-value">0.00</span>
+                <span class="text-xs text-gray-500">credits</span>
+              </div>
+            </div>
+            <button
+              id="recharge-button"
+              class="w-full mt-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium py-2 px-4 rounded-md transition-colors flex items-center justify-center gap-2"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+              </svg>
+              <span data-i18n="rechargeButton">Recharge Now</span>
+            </button>
+          </div>
+
           <!-- Developer Token (conditional) -->
-          <div id="token-input-container" class="mb-4 hidden">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Developer Token</label>
+          <div id="token-input-container" class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="developerToken">Developer Token</label>
             <input
               type="password"
               id="developer-token-input"
+              data-i18n-placeholder="developerTokenPlaceholder"
               placeholder="dev-token-xxxxx"
               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
             >
@@ -100,7 +127,7 @@
 
           <!-- Chat Model -->
           <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Chat Model</label>
+            <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="chatModel">Chat Model</label>
             <input
               type="text"
               id="chat-model"
@@ -108,12 +135,12 @@
               placeholder="gpt-4o"
               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
             >
-            <p class="text-xs text-gray-500 mt-1">e.g., gpt-4o, gpt-4o-mini, gpt-4</p>
+            <p class="text-xs text-gray-500 mt-1" data-i18n="chatModelHint">e.g., gpt-4o, gpt-4o-mini, gpt-4</p>
           </div>
 
           <!-- Image Model -->
           <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Image Model</label>
+            <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="imageModel">Image Model</label>
             <input
               type="text"
               id="image-model"
@@ -121,13 +148,14 @@
               placeholder="flux-1-schnell"
               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
             >
-            <p class="text-xs text-gray-500 mt-1">e.g., flux-1-schnell, dall-e-3</p>
+            <p class="text-xs text-gray-500 mt-1" data-i18n="imageModelHint">e.g., flux-1-schnell, dall-e-3</p>
           </div>
 
           <!-- Initialize Button -->
           <button
             id="init-button"
             class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+            data-i18n="initButton"
           >
             Initialize SDK
           </button>
@@ -136,6 +164,7 @@
           <button
             id="logout-button"
             class="w-full mt-2 bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-md transition-colors hidden"
+            data-i18n="logoutButton"
           >
             Logout
           </button>
@@ -143,7 +172,7 @@
           <!-- Debug Toggle -->
           <div class="mt-4 flex items-center">
             <input type="checkbox" id="debug-toggle" class="mr-2">
-            <label for="debug-toggle" class="text-sm text-gray-600">Enable Debug Mode</label>
+            <label for="debug-toggle" class="text-sm text-gray-600" data-i18n="debugMode">Enable Debug Mode</label>
           </div>
         </div>
       </aside>
@@ -154,13 +183,13 @@
         <div class="bg-white rounded-lg shadow">
           <div class="border-b border-gray-200">
             <nav class="flex -mb-px">
-              <button class="tab-button px-6 py-3 text-sm font-medium text-blue-600 border-b-2 border-blue-600" data-tab="chat">
+              <button class="tab-button px-6 py-3 text-sm font-medium text-blue-600 border-b-2 border-blue-600" data-tab="chat" data-i18n="tabTextGen">
                 Text Generation
               </button>
-              <button class="tab-button px-6 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent" data-tab="image">
+              <button class="tab-button px-6 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent" data-tab="image" data-i18n="tabImageGen">
                 Image Generation
               </button>
-              <button class="tab-button px-6 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent" data-tab="npc">
+              <button class="tab-button px-6 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent" data-tab="npc" data-i18n="tabNPC">
                 NPC Conversations
               </button>
             </nav>
@@ -168,14 +197,15 @@
 
           <!-- Tab Content: Text Generation -->
           <div class="tab-content active p-6" id="chat-tab">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Text Generation</h3>
+            <h3 class="text-lg font-semibold text-gray-900 mb-4" data-i18n="textGenTitle">Text Generation</h3>
 
             <!-- System Prompt -->
             <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-2">System Prompt (Optional)</label>
+              <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="systemPrompt">System Prompt (Optional)</label>
               <textarea
                 id="chat-system-prompt"
                 rows="2"
+                data-i18n-placeholder="systemPromptPlaceholder"
                 placeholder="You are a helpful assistant..."
                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
               ></textarea>
@@ -184,54 +214,69 @@
             <!-- Streaming Toggle -->
             <div class="mb-4 flex items-center">
               <input type="checkbox" id="chat-streaming" class="mr-2" checked>
-              <label for="chat-streaming" class="text-sm text-gray-600">Enable Streaming</label>
+              <label for="chat-streaming" class="text-sm text-gray-600" data-i18n="enableStreaming">Enable Streaming</label>
             </div>
 
             <!-- Messages Container -->
             <div id="chat-messages" class="bg-gray-50 rounded-md p-4 mb-4 h-96 overflow-y-auto">
-              <p class="text-gray-400 text-sm">Messages will appear here...</p>
+              <p class="text-gray-400 text-sm" data-i18n="messagesPlaceholder">Messages will appear here...</p>
             </div>
 
             <!-- Input -->
-            <div class="flex gap-2">
+            <div class="flex gap-2 mb-2">
               <input
                 type="text"
                 id="chat-input"
+                data-i18n-placeholder="inputPlaceholder"
                 placeholder="Type your message..."
                 class="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
               >
               <button
                 id="chat-send"
                 class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md transition-colors disabled:bg-gray-400"
+                data-i18n="sendButton"
                 disabled
               >
                 Send
+              </button>
+            </div>
+
+            <!-- Clear History Button -->
+            <div class="flex justify-end">
+              <button
+                id="chat-clear"
+                class="text-sm text-red-600 hover:text-red-700 font-medium py-1 px-3 rounded-md hover:bg-red-50 transition-colors"
+                data-i18n="clearHistory"
+              >
+                Clear History
               </button>
             </div>
           </div>
 
           <!-- Tab Content: Image Generation -->
           <div class="tab-content p-6" id="image-tab">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Image Generation</h3>
+            <h3 class="text-lg font-semibold text-gray-900 mb-4" data-i18n="imageGenTitle">Image Generation</h3>
 
             <!-- Image Size -->
             <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-2">Image Size</label>
-              <select id="image-size" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                <option value="1024x1024">1024x1024 (Square)</option>
-                <option value="1792x1024">1792x1024 (Landscape)</option>
-                <option value="1024x1792">1024x1792 (Portrait)</option>
-                <option value="512x512">512x512 (Small)</option>
-                <option value="256x256">256x256 (Tiny)</option>
-              </select>
+              <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="imageSize">Image Size</label>
+              <input
+                type="text"
+                id="image-size"
+                value="1024x1024"
+                placeholder="1024x1024"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              >
+              <p class="text-xs text-gray-500 mt-1">e.g., 1024x1024, 1792x1024, 512x512</p>
             </div>
 
             <!-- Prompt -->
             <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-2">Image Description</label>
+              <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="imageDescription">Image Description</label>
               <textarea
                 id="image-prompt"
                 rows="3"
+                data-i18n-placeholder="imagePromptPlaceholder"
                 placeholder="A beautiful sunset over the ocean..."
                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
               ></textarea>
@@ -240,6 +285,7 @@
             <button
               id="image-generate"
               class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors disabled:bg-gray-400 mb-4"
+              data-i18n="generateButton"
               disabled
             >
               Generate Image
@@ -248,7 +294,7 @@
             <!-- Loading State -->
             <div id="image-loading" class="hidden text-center py-8">
               <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-              <p class="text-gray-600 mt-4">Generating image...</p>
+              <p class="text-gray-600 mt-4" data-i18n="generatingImage">Generating image...</p>
             </div>
 
             <!-- P5.js Canvas Container -->
@@ -260,29 +306,31 @@
 
           <!-- Tab Content: NPC Conversations -->
           <div class="tab-content p-6" id="npc-tab">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">NPC Conversations</h3>
+            <h3 class="text-lg font-semibold text-gray-900 mb-4" data-i18n="npcTitle">NPC Conversations</h3>
 
             <!-- NPC List -->
             <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-2">Active NPCs</label>
+              <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="activeNPCs">Active NPCs</label>
               <select id="npc-list" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                <option value="">Select an NPC...</option>
+                <option value="" data-i18n="selectNPC">Select an NPC...</option>
               </select>
             </div>
 
             <!-- Create NPC -->
             <div class="bg-gray-50 rounded-md p-4 mb-4">
-              <h4 class="text-sm font-semibold text-gray-900 mb-3">Create New NPC</h4>
+              <h4 class="text-sm font-semibold text-gray-900 mb-3" data-i18n="createNewNPC">Create New NPC</h4>
               <div class="mb-3">
                 <input
                   type="text"
                   id="npc-name"
+                  data-i18n-placeholder="npcName"
                   placeholder="NPC Name (e.g., Guard)"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 mb-2"
                 >
                 <textarea
                   id="npc-system-prompt"
                   rows="3"
+                  data-i18n-placeholder="npcSystemPromptPlaceholder"
                   placeholder="You are a medieval guard. You are suspicious of strangers..."
                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                 ></textarea>
@@ -290,6 +338,7 @@
               <button
                 id="npc-create"
                 class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition-colors disabled:bg-gray-400"
+                data-i18n="createNPCButton"
                 disabled
               >
                 Create NPC
@@ -299,7 +348,7 @@
             <!-- NPC Conversation -->
             <div id="npc-conversation-container" class="hidden">
               <div id="npc-messages" class="bg-gray-50 rounded-md p-4 mb-4 h-96 overflow-y-auto">
-                <p class="text-gray-400 text-sm">Select or create an NPC to start chatting...</p>
+                <p class="text-gray-400 text-sm" data-i18n="npcPlaceholder">Select or create an NPC to start chatting...</p>
               </div>
 
               <!-- Input -->
@@ -307,12 +356,14 @@
                 <input
                   type="text"
                   id="npc-input"
+                  data-i18n-placeholder="talkToNPC"
                   placeholder="Talk to the NPC..."
                   class="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                 >
                 <button
                   id="npc-send"
                   class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md transition-colors"
+                  data-i18n="sendButton"
                 >
                   Send
                 </button>
@@ -323,18 +374,21 @@
                 <button
                   id="npc-save"
                   class="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-md transition-colors text-sm"
+                  data-i18n="saveHistory"
                 >
                   Save History
                 </button>
                 <button
                   id="npc-load"
                   class="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-md transition-colors text-sm"
+                  data-i18n="loadHistory"
                 >
                   Load History
                 </button>
                 <button
                   id="npc-reset"
                   class="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition-colors text-sm"
+                  data-i18n="resetHistory"
                 >
                   Reset
                 </button>

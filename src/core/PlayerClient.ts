@@ -5,6 +5,8 @@
 import EventEmitter from 'eventemitter3';
 import { PlayerInfo, PlayKitError, SDKConfig } from '../types';
 import { AuthManager } from '../auth/AuthManager';
+import { RechargeManager } from '../recharge/RechargeManager';
+import { RechargeConfig } from '../types/recharge';
 
 const DEFAULT_BASE_URL = 'https://playkit.agentlandlab.com';
 const PLAYER_INFO_ENDPOINT = '/api/external/player-info';
@@ -13,11 +15,20 @@ export class PlayerClient extends EventEmitter {
   private authManager: AuthManager;
   private baseURL: string;
   private playerInfo: PlayerInfo | null = null;
+  private rechargeManager: RechargeManager | null = null;
+  private balanceCheckInterval: NodeJS.Timeout | null = null;
+  private rechargeConfig: RechargeConfig;
 
-  constructor(authManager: AuthManager, config: SDKConfig) {
+  constructor(authManager: AuthManager, config: SDKConfig, rechargeConfig: RechargeConfig = {}) {
     super();
     this.authManager = authManager;
     this.baseURL = config.baseURL || DEFAULT_BASE_URL;
+    this.rechargeConfig = {
+      autoShowBalanceModal: rechargeConfig.autoShowBalanceModal ?? true,
+      balanceCheckInterval: rechargeConfig.balanceCheckInterval ?? 30000,
+      checkBalanceAfterApiCall: rechargeConfig.checkBalanceAfterApiCall ?? true,
+      rechargePortalUrl: rechargeConfig.rechargePortalUrl || 'https://playkit.agentlandlab.com/playerPortal/recharge',
+    };
   }
 
   /**
@@ -81,5 +92,147 @@ export class PlayerClient extends EventEmitter {
    */
   async refreshPlayerInfo(): Promise<PlayerInfo> {
     return this.getPlayerInfo();
+  }
+
+  /**
+   * Initialize recharge manager
+   */
+  private initializeRechargeManager(): void {
+    const token = this.authManager.getToken();
+    if (token && !this.rechargeManager) {
+      this.rechargeManager = new RechargeManager(token, this.rechargeConfig.rechargePortalUrl);
+
+      // Forward recharge events
+      this.rechargeManager.on('recharge_opened', () => this.emit('recharge_opened'));
+      this.rechargeManager.on('recharge_modal_shown', () => this.emit('recharge_modal_shown'));
+      this.rechargeManager.on('recharge_modal_dismissed', () => this.emit('recharge_modal_dismissed'));
+    }
+  }
+
+  /**
+   * Show insufficient balance modal
+   */
+  async showInsufficientBalanceModal(customMessage?: string): Promise<void> {
+    this.initializeRechargeManager();
+
+    if (!this.rechargeManager) {
+      console.warn('RechargeManager not initialized. Cannot show modal.');
+      return;
+    }
+
+    const balance = this.playerInfo?.credits;
+    await this.rechargeManager.showInsufficientBalanceModal({
+      currentBalance: balance,
+      message: customMessage,
+    });
+  }
+
+  /**
+   * Open recharge window in new tab
+   */
+  openRechargeWindow(): void {
+    this.initializeRechargeManager();
+
+    if (!this.rechargeManager) {
+      console.warn('RechargeManager not initialized. Cannot open recharge window.');
+      return;
+    }
+
+    this.rechargeManager.openRechargeWindow();
+  }
+
+  /**
+   * Enable automatic periodic balance checking
+   */
+  enableAutoBalanceCheck(intervalMs?: number): void {
+    const interval = intervalMs ?? this.rechargeConfig.balanceCheckInterval ?? 30000;
+
+    // Don't enable if interval is 0 or negative
+    if (interval <= 0) {
+      return;
+    }
+
+    // Clear existing interval if any
+    this.disableAutoBalanceCheck();
+
+    // Start periodic balance check
+    this.balanceCheckInterval = setInterval(async () => {
+      try {
+        const oldBalance = this.playerInfo?.credits;
+        await this.refreshPlayerInfo();
+        const newBalance = this.playerInfo?.credits;
+
+        // Emit balance_updated event
+        if (newBalance !== undefined) {
+          this.emit('balance_updated', newBalance);
+
+          // Check for low balance (less than 10 credits)
+          if (newBalance < 10 && newBalance !== oldBalance) {
+            this.emit('balance_low', newBalance);
+          }
+        }
+      } catch (error) {
+        // Silently fail periodic checks to avoid spamming errors
+        console.debug('Failed to check balance:', error);
+      }
+    }, interval);
+  }
+
+  /**
+   * Disable automatic balance checking
+   */
+  disableAutoBalanceCheck(): void {
+    if (this.balanceCheckInterval) {
+      clearInterval(this.balanceCheckInterval);
+      this.balanceCheckInterval = null;
+    }
+  }
+
+  /**
+   * Check balance after API call (called internally by providers)
+   */
+  async checkBalanceAfterApiCall(): Promise<void> {
+    if (!this.rechargeConfig.checkBalanceAfterApiCall) {
+      return;
+    }
+
+    try {
+      await this.refreshPlayerInfo();
+    } catch (error) {
+      // Silently fail to avoid disrupting the main flow
+      console.debug('Failed to check balance after API call:', error);
+    }
+  }
+
+  /**
+   * Handle insufficient credits error (called by providers)
+   */
+  async handleInsufficientCredits(error: Error): Promise<void> {
+    this.emit('insufficient_credits', error);
+
+    // Auto-show modal if enabled
+    if (this.rechargeConfig.autoShowBalanceModal) {
+      await this.showInsufficientBalanceModal();
+    }
+  }
+
+  /**
+   * Get recharge manager instance
+   */
+  getRechargeManager(): RechargeManager | null {
+    this.initializeRechargeManager();
+    return this.rechargeManager;
+  }
+
+  /**
+   * Clean up resources
+   */
+  destroy(): void {
+    this.disableAutoBalanceCheck();
+    if (this.rechargeManager) {
+      this.rechargeManager.destroy();
+      this.rechargeManager = null;
+    }
+    this.removeAllListeners();
   }
 }

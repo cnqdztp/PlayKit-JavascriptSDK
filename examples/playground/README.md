@@ -6,9 +6,10 @@ An interactive playground for testing and exploring PlayKit SDK features.
 
 - **Multiple Authentication Methods**: Choose between developer token (for testing) or automatic player login (for production)
 - **Text Generation**: Test AI chat with customizable models and system prompts, with streaming support
-- **Image Generation**: Generate images with DALL-E, display them in a P5.js canvas, and browse a gallery
+- **Image Generation**: Generate images with any model (default: flux-1-schnell), display them in a P5.js canvas, and browse a gallery
 - **NPC Conversations**: Create and manage multiple NPCs with custom personalities, save/load conversation history
-- **Model Selection**: Switch between different GPT models and DALL-E versions
+- **Flexible Model Selection**: Enter any chat or image model name (not limited to preset options)
+- **Bilingual Support**: Switch between English and Chinese (中文) interface
 - **Beautiful UI**: Modern interface built with Tailwind CSS
 
 ## Setup
@@ -48,10 +49,12 @@ Then visit: `http://localhost:8000/examples/playground/`
    - **Developer Token**: Quick testing, costs charged to your account
 
 3. **Select Models**:
-   - Chat Model: Choose from GPT-4o, GPT-4o-mini, GPT-4, or GPT-3.5-turbo
-   - Image Model: DALL-E 3 (recommended) or DALL-E 2
+   - Chat Model: Enter any model name (default: gpt-4o). Examples: gpt-4o, gpt-4o-mini, gpt-4, claude-3-opus
+   - Image Model: Enter any model name (default: flux-1-schnell). Examples: flux-1-schnell, dall-e-3, sd-3.0
 
-4. **Click "Initialize SDK"**: Wait for authentication to complete
+4. **Choose Language**: Select English or 中文 from the language selector in the header
+
+5. **Click "Initialize SDK"**: Wait for authentication to complete
 
 ### Text Generation
 

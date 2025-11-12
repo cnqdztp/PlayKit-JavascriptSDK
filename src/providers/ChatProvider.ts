@@ -5,6 +5,7 @@
 import { ChatConfig, ChatCompletionResponse, PlayKitError, SDKConfig } from '../types';
 import { AuthManager } from '../auth/AuthManager';
 import { StreamParser } from '../utils/StreamParser';
+import { PlayerClient } from '../core/PlayerClient';
 
 const DEFAULT_BASE_URL = 'https://playkit.agentlandlab.com';
 
@@ -12,11 +13,19 @@ export class ChatProvider {
   private authManager: AuthManager;
   private config: SDKConfig;
   private baseURL: string;
+  private playerClient?: PlayerClient;
 
   constructor(authManager: AuthManager, config: SDKConfig) {
     this.authManager = authManager;
     this.config = config;
     this.baseURL = config.baseURL || DEFAULT_BASE_URL;
+  }
+
+  /**
+   * Set player client for balance checking
+   */
+  setPlayerClient(playerClient: PlayerClient): void {
+    this.playerClient = playerClient;
   }
 
   /**
@@ -54,14 +63,32 @@ export class ChatProvider {
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({ message: 'Chat request failed' }));
-        throw new PlayKitError(
+        const playKitError = new PlayKitError(
           error.message || 'Chat request failed',
           error.code,
           response.status
         );
+
+        // Check for insufficient credits error
+        if (error.code === 'INSUFFICIENT_CREDITS' || response.status === 402) {
+          if (this.playerClient) {
+            await this.playerClient.handleInsufficientCredits(playKitError);
+          }
+        }
+
+        throw playKitError;
       }
 
-      return await response.json();
+      const result = await response.json();
+
+      // Check balance after successful API call
+      if (this.playerClient) {
+        this.playerClient.checkBalanceAfterApiCall().catch(() => {
+          // Silently fail
+        });
+      }
+
+      return result;
     } catch (error) {
       if (error instanceof PlayKitError) {
         throw error;
@@ -110,15 +137,31 @@ export class ChatProvider {
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({ message: 'Chat stream request failed' }));
-        throw new PlayKitError(
+        const playKitError = new PlayKitError(
           error.message || 'Chat stream request failed',
           error.code,
           response.status
         );
+
+        // Check for insufficient credits error
+        if (error.code === 'INSUFFICIENT_CREDITS' || response.status === 402) {
+          if (this.playerClient) {
+            await this.playerClient.handleInsufficientCredits(playKitError);
+          }
+        }
+
+        throw playKitError;
       }
 
       if (!response.body) {
         throw new PlayKitError('Response body is null', 'NO_RESPONSE_BODY');
+      }
+
+      // Check balance after successful API call
+      if (this.playerClient) {
+        this.playerClient.checkBalanceAfterApiCall().catch(() => {
+          // Silently fail
+        });
       }
 
       return response.body.getReader();

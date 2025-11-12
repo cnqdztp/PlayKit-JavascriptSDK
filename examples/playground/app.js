@@ -19,6 +19,8 @@ const elements = {
   logoutButton: document.getElementById('logout-button'),
   debugToggle: document.getElementById('debug-toggle'),
   statusIndicator: document.getElementById('status-indicator'),
+  creditDisplay: document.getElementById('credit-display'),
+  creditValue: document.getElementById('credit-value'),
 
   // Chat
   chatSystemPrompt: document.getElementById('chat-system-prompt'),
@@ -26,6 +28,7 @@ const elements = {
   chatMessages: document.getElementById('chat-messages'),
   chatInput: document.getElementById('chat-input'),
   chatSend: document.getElementById('chat-send'),
+  chatClear: document.getElementById('chat-clear'),
 
   // Image
   imageSize: document.getElementById('image-size'),
@@ -47,6 +50,9 @@ const elements = {
   npcSave: document.getElementById('npc-save'),
   npcLoad: document.getElementById('npc-load'),
   npcReset: document.getElementById('npc-reset'),
+
+  // Recharge
+  rechargeButton: document.getElementById('recharge-button'),
 };
 
 // Initialize
@@ -102,6 +108,7 @@ function setupEventListeners() {
   elements.chatInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') sendChatMessage();
   });
+  elements.chatClear.addEventListener('click', clearChatHistory);
 
   // Image
   elements.imageGenerate.addEventListener('click', generateImage);
@@ -116,6 +123,9 @@ function setupEventListeners() {
   elements.npcSave.addEventListener('click', saveNPCHistory);
   elements.npcLoad.addEventListener('click', loadNPCHistory);
   elements.npcReset.addEventListener('click', resetNPCHistory);
+
+  // Recharge
+  elements.rechargeButton.addEventListener('click', openRecharge);
 }
 
 // Setup P5.js Canvas
@@ -178,9 +188,14 @@ function loadSavedConfig() {
     try {
       const config = JSON.parse(saved);
       if (config.gameId) elements.gameIdInput.value = config.gameId;
-      if (config.authMethod) elements.authMethod.value = config.authMethod;
+      if (config.authMethod) {
+        elements.authMethod.value = config.authMethod;
+        // Update token container visibility
+        elements.tokenInputContainer.classList.toggle('hidden', config.authMethod !== 'token');
+      }
       if (config.chatModel) elements.chatModel.value = config.chatModel;
       if (config.imageModel) elements.imageModel.value = config.imageModel;
+      if (config.developerToken) elements.developerTokenInput.value = config.developerToken;
     } catch (e) {
       console.error('Failed to load saved config:', e);
     }
@@ -194,6 +209,7 @@ function saveConfig() {
     authMethod: elements.authMethod.value,
     chatModel: elements.chatModel.value,
     imageModel: elements.imageModel.value,
+    developerToken: elements.developerTokenInput.value,
   };
   localStorage.setItem('playkit-playground-config', JSON.stringify(config));
 }
@@ -209,6 +225,43 @@ function updateStatus(authenticated) {
     dot.className = 'w-3 h-3 bg-red-500 rounded-full';
     text.textContent = i18n.t('status.notInitialized');
     elements.logoutButton.classList.add('hidden');
+    elements.creditDisplay.style.display = 'none';
+  }
+}
+
+// Update Credit Display
+async function updateCreditDisplay() {
+  if (!sdk) return;
+
+  try {
+    const authState = sdk.getAuthManager().getAuthState();
+    console.log('[Credit] Auth state:', authState);
+
+    // Only show credit for player tokens
+    if (authState.tokenType === 'player') {
+      const playerInfo = await sdk.getPlayerInfo();
+      console.log('[Credit] Player info:', playerInfo);
+
+      // Check for both 'credit' and 'credits' (API返回的是'credits')
+      const creditValue = playerInfo.credits || playerInfo.credit;
+
+      if (playerInfo && creditValue !== undefined) {
+        // Convert string to number if needed
+        const creditNum = typeof creditValue === 'string' ? parseFloat(creditValue) : creditValue;
+        elements.creditValue.textContent = creditNum.toFixed(2);
+        elements.creditDisplay.style.display = 'block';
+        console.log('[Credit] Displayed credit:', creditNum);
+      } else {
+        console.log('[Credit] No credit info available');
+        elements.creditDisplay.style.display = 'none';
+      }
+    } else {
+      console.log('[Credit] Not player token, hiding credit display');
+      elements.creditDisplay.style.display = 'none';
+    }
+  } catch (error) {
+    console.error('Failed to fetch player info:', error);
+    elements.creditDisplay.style.display = 'none';
   }
 }
 
@@ -260,8 +313,28 @@ async function initializeSDK() {
       showNotification(`Error: ${error.message}`, 'error');
     });
 
+    // Setup recharge events
+    sdk.on('recharge_opened', () => {
+      console.log('Recharge window opened');
+    });
+
+    sdk.on('insufficient_credits', (error) => {
+      console.log('Insufficient credits detected');
+      showNotification('Insufficient credits! Please recharge.', 'error');
+    });
+
+    sdk.on('balance_updated', async (credits) => {
+      console.log('Balance updated:', credits);
+      await updateCreditDisplay();
+    });
+
     // Initialize
     await sdk.initialize();
+
+    // Enable automatic balance checking (every 30 seconds)
+    if (authMethod === 'auto') {
+      sdk.enableAutoBalanceCheck(30000);
+    }
 
     // Create clients
     chatClient = sdk.createChatClient(elements.chatModel.value);
@@ -271,6 +344,9 @@ async function initializeSDK() {
     elements.chatSend.disabled = false;
     elements.imageGenerate.disabled = false;
     elements.npcCreate.disabled = false;
+
+    // Update credit display for player accounts
+    await updateCreditDisplay();
 
     showNotification(i18n.t('initSuccess'), 'success');
     saveConfig();
@@ -318,6 +394,13 @@ async function logout() {
 }
 
 // Chat Functions
+function clearChatHistory() {
+  if (confirm(i18n.t('confirmClearChat') || 'Are you sure you want to clear all chat messages?')) {
+    elements.chatMessages.innerHTML = `<p class="text-gray-400 text-sm">${i18n.t('messagesPlaceholder')}</p>`;
+    showNotification(i18n.t('chatHistoryCleared') || 'Chat history cleared', 'success');
+  }
+}
+
 async function sendChatMessage() {
   if (!chatClient) {
     showNotification(i18n.t('initFirst'), 'error');
@@ -411,10 +494,10 @@ async function generateImage() {
 
   try {
     const size = elements.imageSize.value;
-    const result = await imageClient.generate(prompt, { size });
+    const result = await imageClient.generate(prompt, size);
 
     // Display in P5 canvas
-    const img = await result.toImageElement();
+    const img = await result.toHTMLImage();
     const p5Image = p5Instance.loadImage(img.src, () => {
       p5Instance.displayImage(p5Image);
     });
@@ -644,6 +727,17 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+// Open recharge window
+function openRecharge() {
+  if (!sdk) {
+    showNotification('Please initialize SDK first', 'error');
+    return;
+  }
+
+  sdk.openRechargeWindow();
+  showNotification('Recharge window opened', 'success');
 }
 
 // Initialize on load
