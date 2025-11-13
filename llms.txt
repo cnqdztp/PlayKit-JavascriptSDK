@@ -1,0 +1,155 @@
+# PlayKit SDK for JavaScript
+
+> JavaScript/TypeScript SDK for integrating AI capabilities into web-based games
+
+## Project Overview
+
+PlayKit SDK is a framework-agnostic JavaScript/TypeScript library that enables game developers to integrate AI-powered features like text generation, image generation, and NPC conversations into web-based games. Compatible with P5.js, Phaser, PixiJS, and vanilla JavaScript.
+
+## Key Features
+
+- AI-powered text generation using GPT models
+- Image generation using DALL-E models
+- NPC conversation management with automatic history tracking
+- JWT-based authentication and token management
+- Real-time streaming responses
+- Multiple bundle formats (ESM, CJS, UMD)
+- Encrypted token storage using Web Crypto API
+- Full TypeScript support
+- Player balance management and recharge functionality
+
+## Installation
+
+```bash
+npm install playkit-sdk
+```
+
+## Quick Start
+
+```typescript
+import { PlayKitSDK } from 'playkit-sdk';
+
+const sdk = new PlayKitSDK({
+  gameId: 'your-game-id',
+  developerToken: 'your-dev-token',
+});
+
+await sdk.initialize();
+```
+
+## Core Architecture
+
+### Main Components
+
+- **PlayKitSDK** (`src/core/PlayKitSDK.ts`) - Main SDK entry point
+- **ChatClient** (`src/core/ChatClient.ts`) - Text generation client
+- **ImageClient** (`src/core/ImageClient.ts`) - Image generation client
+- **NPCClient** (`src/core/NPCClient.ts`) - NPC conversation manager
+- **PlayerClient** (`src/core/PlayerClient.ts`) - Player info and balance management
+
+### Authentication System
+
+- **AuthManager** (`src/auth/AuthManager.ts`) - Handles authentication flow
+- **AuthFlowManager** (`src/auth/AuthFlowManager.ts`) - OAuth flow management
+- **TokenStorage** (`src/auth/TokenStorage.ts`) - Encrypted token storage
+
+### Providers
+
+- **ChatProvider** (`src/providers/ChatProvider.ts`) - Chat API integration
+- **ImageProvider** (`src/providers/ImageProvider.ts`) - Image API integration
+
+### Utilities
+
+- **StreamParser** (`src/utils/StreamParser.ts`) - Parses streaming responses
+- **RechargeManager** (`src/recharge/RechargeManager.ts`) - Handles player recharge flow
+
+## Common Use Cases
+
+### Text Generation
+
+```typescript
+const chat = sdk.createChatClient('gpt-4o-mini');
+const response = await chat.chat('Hello, introduce yourself');
+```
+
+### Streaming Responses
+
+```typescript
+await chat.chatStream(
+  'Tell a story',
+  (chunk) => process.stdout.write(chunk),
+  (fullText) => console.log('\nComplete:', fullText)
+);
+```
+
+### Image Generation
+
+```typescript
+const imageClient = sdk.createImageClient('dall-e-3');
+const image = await imageClient.generate('A futuristic city');
+const imgElement = await image.toHTMLImage();
+```
+
+### NPC Conversations
+
+```typescript
+const npc = sdk.createNPCClient({
+  systemPrompt: 'You are a mysterious wizard.',
+  temperature: 0.8,
+});
+
+const reply = await npc.talk('Who are you?');
+```
+
+### Player Balance
+
+```typescript
+const playerInfo = await sdk.getPlayerInfo();
+console.log('Credits:', playerInfo.credits);
+
+sdk.openRechargeWindow();
+sdk.on('balance_updated', (credits) => console.log('New balance:', credits));
+```
+
+## API Models
+
+Ask human to check out available ai models on https://playkit.agentlandlab.com , add more models as they wish
+
+## Events
+
+The SDK extends EventEmitter and emits the following events:
+
+- `balance_updated` - Fired when player balance changes
+- `insufficient_credits` - Fired when an API call fails due to insufficient credits
+- `auth_success` - Fired when authentication succeeds
+- `auth_error` - Fired when authentication fails
+
+## Framework Integration
+
+### P5.js
+Compatible with P5.js - initialize in setup(), use in draw() and event handlers
+
+### Phaser
+Can be integrated into Phaser scenes and game states
+
+### PixiJS
+Works alongside PixiJS applications
+
+### Vanilla JS
+Available via UMD bundle at https://unpkg.com/playkit-sdk@latest/dist/index.umd.js
+
+## Build Output
+
+- `dist/index.esm.js` - ES module
+- `dist/index.cjs.js` - CommonJS module
+- `dist/index.umd.js` - UMD bundle for browsers
+- `dist/index.d.ts` - TypeScript definitions
+
+## Development
+
+```bash
+npm run build        # Build all formats
+npm run dev          # Watch mode
+npm run typecheck    # Type checking
+npm run lint         # Lint code
+```
