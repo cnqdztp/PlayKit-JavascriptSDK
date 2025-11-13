@@ -20,6 +20,7 @@ export class PlayKitSDK extends EventEmitter {
   private chatProvider: ChatProvider;
   private imageProvider: ImageProvider;
   private initialized: boolean = false;
+  private devTokenIndicator: HTMLDivElement | null = null;
 
   constructor(config: SDKConfig & { recharge?: RechargeConfig }) {
     super();
@@ -87,6 +88,12 @@ export class PlayKitSDK extends EventEmitter {
     try {
       await this.authManager.initialize();
       this.initialized = true;
+
+      // Show developer token indicator if using developer token
+      if (this.config.developerToken && typeof window !== 'undefined') {
+        this.showDeveloperTokenIndicator();
+      }
+
       this.emit('ready');
 
       if (this.config.debug) {
@@ -95,6 +102,46 @@ export class PlayKitSDK extends EventEmitter {
     } catch (error) {
       this.emit('error', error);
       throw error;
+    }
+  }
+
+  /**
+   * Show developer token indicator in top-left corner
+   */
+  private showDeveloperTokenIndicator(): void {
+    if (this.devTokenIndicator) {
+      return; // Already shown
+    }
+
+    // Create indicator element
+    this.devTokenIndicator = document.createElement('div');
+    this.devTokenIndicator.textContent = 'DeveloperToken';
+    this.devTokenIndicator.style.cssText = `
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background-color: #dc2626;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      z-index: 999999;
+      pointer-events: none;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    `;
+
+    document.body.appendChild(this.devTokenIndicator);
+  }
+
+  /**
+   * Hide developer token indicator
+   */
+  private hideDeveloperTokenIndicator(): void {
+    if (this.devTokenIndicator) {
+      this.devTokenIndicator.remove();
+      this.devTokenIndicator = null;
     }
   }
 
@@ -124,6 +171,7 @@ export class PlayKitSDK extends EventEmitter {
    */
   async logout(): Promise<void> {
     await this.authManager.logout();
+    this.hideDeveloperTokenIndicator();
   }
 
   /**
