@@ -54,15 +54,7 @@ const elements = {
   // Recharge
   rechargeButton: document.getElementById('recharge-button'),
 };
-// Debug: Listen to ALL postMessage events
-  window.addEventListener('message', (event) => {
-    console.log('[DEBUG] Global message listener received:', {
-      origin: event.origin,
-      data: event.data
-    });
-  }, false);
 
-  console.log('[DEBUG] Global message listener installed');
 // Initialize
 function init() {
   setupEventListeners();

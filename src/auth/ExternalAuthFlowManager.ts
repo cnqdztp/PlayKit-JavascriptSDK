@@ -8,6 +8,8 @@ import { PlayKitError } from '../types';
 
 interface I18nTranslations {
   loginToPlay: string;
+  loginInNewWindow: string;
+  cancel: string;
 }
 
 type SupportedLanguage = 'en' | 'zh' | 'zh-TW' | 'ja' | 'ko';
@@ -16,18 +18,28 @@ type SupportedLanguage = 'en' | 'zh' | 'zh-TW' | 'ja' | 'ko';
 const translations: Record<SupportedLanguage, I18nTranslations> = {
   en: {
     loginToPlay: 'Login to Play',
+    loginInNewWindow: 'Please login in the opened window',
+    cancel: 'Cancel',
   },
   zh: {
     loginToPlay: '登录开始游玩',
+    loginInNewWindow: '请在打开的新窗口中登录',
+    cancel: '取消',
   },
   'zh-TW': {
     loginToPlay: '登入開始遊玩',
+    loginInNewWindow: '請在打開的新視窗中登入',
+    cancel: '取消',
   },
   ja: {
     loginToPlay: 'ログインしてプレイ',
+    loginInNewWindow: '開いたウィンドウでログインしてください',
+    cancel: 'キャンセル',
   },
   ko: {
     loginToPlay: '로그인하여 플레이',
+    loginInNewWindow: '열린 창에서 로그인하세요',
+    cancel: '취소',
   },
 };
 
@@ -127,12 +139,37 @@ export class ExternalAuthFlowManager extends EventEmitter {
    */
   async startFlow(): Promise<string> {
     return new Promise(async (resolve, reject) => {
+      let modal: HTMLDivElement | null = null;
+      let popup: Window | null = null;
+      let messageHandler: ((event: MessageEvent) => void) | null = null;
+
+      const cleanup = () => {
+        if (modal && modal.parentElement) {
+          modal.remove();
+        }
+        if (popup && !popup.closed) {
+          popup.close();
+        }
+        if (messageHandler) {
+          window.removeEventListener('message', messageHandler);
+        }
+      };
+
       try {
         // Fetch game information
         const gameInfo = await this.fetchGameInfo();
 
         // Show login button modal
-        await this.showLoginModal(gameInfo);
+        const modalResult = await this.showLoginModal(gameInfo);
+        modal = modalResult.modal;
+
+        // Wait for user to click login button
+        await Promise.race([
+          modalResult.clicked,
+          modalResult.cancelled.then(() => {
+            throw new PlayKitError('User cancelled login', 'USER_CANCELLED');
+          }),
+        ]);
 
         // Generate PKCE parameters
         const codeVerifier = this.generateCodeVerifier();
@@ -154,15 +191,16 @@ export class ExternalAuthFlowManager extends EventEmitter {
         const authUrl = `${this.baseURL}/external-auth/authorize?${params}`;
 
         // Open popup window
-        const popup = window.open(authUrl, 'playkit_auth', 'width=500,height=700,popup=1');
+        popup = window.open(authUrl, 'playkit_auth', 'width=500,height=700,popup=1');
 
         if (!popup) {
+          cleanup();
           reject(new PlayKitError('Popup blocked. Please allow popups for this site.', 'POPUP_BLOCKED'));
           return;
         }
 
         // Listen for messages from popup
-        const messageHandler = async (event: MessageEvent) => {
+        messageHandler = async (event: MessageEvent) => {
           console.log('[ExternalAuth] Received message:', event.origin, event.data);
 
           // Verify origin
@@ -181,10 +219,7 @@ export class ExternalAuthFlowManager extends EventEmitter {
           console.log('[ExternalAuth] Processing auth callback');
 
           // Cleanup
-          window.removeEventListener('message', messageHandler);
-          if (!popup.closed) {
-            popup.close();
-          }
+          cleanup();
 
           try {
             // Extract data from message
@@ -223,8 +258,15 @@ export class ExternalAuthFlowManager extends EventEmitter {
 
         console.log('[ExternalAuth] Listening for postMessage from:', new URL(this.baseURL).origin);
         window.addEventListener('message', messageHandler);
+
+        // Handle cancel button
+        modalResult.cancelled.then(() => {
+          cleanup();
+          reject(new PlayKitError('User cancelled login', 'USER_CANCELLED'));
+        });
       } catch (err) {
         console.error('[ExternalAuth] Error in startFlow:', err);
+        cleanup();
         reject(err);
       }
     });
@@ -246,7 +288,7 @@ export class ExternalAuthFlowManager extends EventEmitter {
    * Show login button modal
    * @private
    */
-  private showLoginModal(gameInfo: { name: string; description: string | null; icon: string | null }): Promise<void> {
+  private showLoginModal(gameInfo: { name: string; description: string | null; icon: string | null }): Promise<{ modal: HTMLDivElement; clicked: Promise<void>; cancelled: Promise<void> }> {
     return new Promise((resolve) => {
       // Create modal container
       const modal = document.createElement('div');
@@ -342,14 +384,72 @@ export class ExternalAuthFlowManager extends EventEmitter {
       loginBtn.onmouseup = () => {
         loginBtn.style.background = '#174EB6';
       };
-      loginBtn.onclick = () => {
-        modal.remove();
-        resolve();
-      };
-      card.appendChild(loginBtn);
 
+      let clickResolve: () => void;
+      let cancelResolve: () => void;
+      const clickedPromise = new Promise<void>((res) => { clickResolve = res; });
+      const cancelledPromise = new Promise<void>((res) => { cancelResolve = res; });
+
+      loginBtn.onclick = () => {
+        // Change to "waiting" state
+        card.innerHTML = '';
+
+        // Show waiting message
+        const waitingTitle = document.createElement('h2');
+        waitingTitle.textContent = gameInfo.name;
+        waitingTitle.style.cssText = `
+          font-size: 24px;
+          font-weight: bold;
+          margin: 0 0 16px;
+          color: #1a1a1a;
+        `;
+        card.appendChild(waitingTitle);
+
+        const waitingMessage = document.createElement('p');
+        waitingMessage.textContent = this.t('loginInNewWindow');
+        waitingMessage.style.cssText = `
+          font-size: 16px;
+          color: #666;
+          margin: 0 0 24px;
+          line-height: 1.5;
+        `;
+        card.appendChild(waitingMessage);
+
+        // Cancel button
+        const cancelBtn = document.createElement('button');
+        cancelBtn.textContent = this.t('cancel');
+        cancelBtn.style.cssText = `
+          width: 100%;
+          padding: 12px 16px;
+          background: #E5E7EB;
+          color: #374151;
+          border: none;
+          border-radius: 2px;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: background-color 0.15s ease;
+        `;
+        cancelBtn.onmouseover = () => {
+          cancelBtn.style.background = '#D1D5DB';
+        };
+        cancelBtn.onmouseout = () => {
+          cancelBtn.style.background = '#E5E7EB';
+        };
+        cancelBtn.onclick = () => {
+          modal.remove();
+          cancelResolve();
+        };
+        card.appendChild(cancelBtn);
+
+        clickResolve();
+      };
+
+      card.appendChild(loginBtn);
       modal.appendChild(card);
       document.body.appendChild(modal);
+
+      resolve({ modal, clicked: clickedPromise, cancelled: cancelledPromise });
     });
   }
 

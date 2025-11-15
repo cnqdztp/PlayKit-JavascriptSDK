@@ -94,6 +94,23 @@ export class PlayKitSDK extends EventEmitter {
         this.showDeveloperTokenIndicator();
       }
 
+      // Always verify token validity and fetch user info after authentication
+      if (this.authManager.isAuthenticated()) {
+        try {
+          await this.playerClient.getPlayerInfo();
+          if (this.config.debug) {
+            console.log('[PlayKitSDK] Token validated and user info fetched');
+          }
+        } catch (error) {
+          // If token is invalid, logout and re-throw error
+          if (this.config.debug) {
+            console.error('[PlayKitSDK] Token validation failed:', error);
+          }
+          await this.authManager.logout();
+          throw new Error('Token validation failed: ' + (error instanceof Error ? error.message : String(error)));
+        }
+      }
+
       this.emit('ready');
 
       if (this.config.debug) {
@@ -163,7 +180,24 @@ export class PlayKitSDK extends EventEmitter {
    * Exchange JWT for player token
    */
   async login(jwt: string): Promise<string> {
-    return await this.authManager.exchangeJWT(jwt);
+    const token = await this.authManager.exchangeJWT(jwt);
+
+    // Verify token validity and fetch user info
+    try {
+      await this.playerClient.getPlayerInfo();
+      if (this.config.debug) {
+        console.log('[PlayKitSDK] Login successful, token validated and user info fetched');
+      }
+    } catch (error) {
+      // If token is invalid, logout and re-throw error
+      if (this.config.debug) {
+        console.error('[PlayKitSDK] Token validation failed after login:', error);
+      }
+      await this.authManager.logout();
+      throw new Error('Token validation failed: ' + (error instanceof Error ? error.message : String(error)));
+    }
+
+    return token;
   }
 
   /**

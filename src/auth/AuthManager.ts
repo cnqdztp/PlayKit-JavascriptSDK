@@ -84,7 +84,7 @@ export class AuthManager extends EventEmitter {
     // Auto-start login flow in browser environment
     if (typeof window !== 'undefined') {
       // Default to external-auth if not specified
-      const useExternalAuth = this.config.authMethod !== 'headless';
+      const useExternalAuth = this.config.authMethod == 'external-auth';
       await this.startAuthFlow(useExternalAuth);
       // If we reach here, authentication was successful
       // If it failed, startAuthFlow() will have thrown an error
